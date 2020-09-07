@@ -10,7 +10,7 @@ def sub_entropy(num):
   return num*np.log2(num)
 
 def plurality_value(data):
-  freq = data.iloc[:, -1].mode()
+  freq = data.iloc[:, -1].value_counts()
 
   
   class0_freq = freq.get(0, default = 0)
@@ -96,7 +96,7 @@ def tree_accuracy(tree, data):
   
   return 0
 
-data_frame = pd.read_table('train4.dat')
+data_frame = pd.read_table('train.dat')
 class_counts = data_frame.iloc[:, -1].value_counts()
 mode_whole_data = plurality_value(data_frame)
 
