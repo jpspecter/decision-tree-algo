@@ -4,104 +4,141 @@ import sys
 import numpy as np
 import pandas as pd
 
-def sub_entropy(num):
+def learning_algorithm(data):
+  
+  if len(data.index) == 0:
+    return maxFrequency[0]
+
+  dataMax = plurality(data)
+  if dataMax[1] == len(data.index):
+    return dataMax[0]
+  elif len(data.columns) == 1:
+    return dataMax[0]
+  else:
+    attrBest = attrOptimal(data)
+    
+    finalTree = {}
+    finalTree[attrBest] = {}
+    for i in range(0, 3):
+      data_i = data[data[attrBest] == i]
+      del data_i[attrBest]
+      subtree = learning_algorithm(data_i)
+      finalTree[attrBest][i] = subtree
+    
+    return finalTree
+
+def logCondition(num):
   if(num == 0):
     return 0
   return num*np.log2(num)
 
-def plurality_value(data):
-  freq = data.iloc[:, -1].value_counts()
-
+def attrOptimal(data):
   
-  class0_freq = freq.get(0, default = 0)
-  class1_freq = freq.get(1, default = 0)
-  class2_freq = freq.get(2, default = 0)
+  entropySample = entropy(data)
+  igMax = -1
+  attrBest = ''
 
-  if class0_freq >= class1_freq and class0_freq >= class2_freq:
-    return 0, class0_freq
-  elif class1_freq >= class0_freq and class1_freq >= class2_freq:
-    return 1, class1_freq
-  else:
-    return 2, class2_freq
+  for attr in data.columns[:-1]:
+    igAttr = entropySample - entropyCond(data, attr)
+    if igAttr > igMax:
+      igMax = igAttr
+      attrBest = attr
 
-def calc_entropy(data):
-  class_Values = data.iloc[:, -1]
-  totalRows = (len(class_Values))
-  if totalRows == 0:
+  return attrBest
+
+def predictionCalc(finalTree, instance):
+    pointerTree = finalTree
+        
+    while not isinstance(pointerTree, int):
+        test_attr = list(pointerTree.keys())[0]
+        subtree = pointerTree[test_attr]
+        pointerTree = subtree[instance[test_attr]]
+    
+    return pointerTree
+
+def accuracyCalc(finalTree, data):
+  
+  total = len(data.index)
+  correct = 0
+  for row_num, row in data.iterrows():
+     if(predictionCalc(finalTree, row.iloc[:-1]) == row.iloc[-1]):
+        correct += 1
+  return round((correct/total)*100, 2)
+
+def treePrinter(finalTree, lvl = 0):
+  if isinstance(finalTree, int):
+    print(str(finalTree) + ' ')
+    return
+  
+  print()
+  
+  for attr in finalTree.keys():
+    for i in range(0, 3):
+      print('| '*lvl + attr + '=' + str(i) + ':', end = '')
+      treePrinter(finalTree[attr][i], lvl+1)
+
+def entropy(data):
+
+  classes = data.iloc[:, -1]
+
+  numRows = (len(classes))
+
+  if numRows == 0:
     return 0
   entropy = 0
+
   for i in range(0, 3):
-    p_i = ((class_Values==i).sum())/totalRows
-    entropy += -sub_entropy(p_i)
+    probabilityI = ((classes==i).sum())/numRows
+    entropy -= logCondition(probabilityI)
   
   return entropy
 
-def calc_conditional_entropy(data,attribute):
-  conditional_entropy = 0;
+def entropyCond(data,attr):
+  cEntropy = 0;
 
   for i in range(0, 3):
-    attr_subset = data[data[attribute] == i]
-    conditional_entropy += (len(attr_subset)*calc_entropy(attr_subset))/len(data)
+    subset = data[data[attr] == i]
+    cEntropy += (len(subset)*entropy(subset))/len(data)
   
-  return conditional_entropy
+  return cEntropy
 
-def best_attribute(data):
+def plurality(data):
+
+  classes = data.iloc[:, -1]
   
-  sample_entropy = calc_entropy(data)
-  max_info_gain = -1
-  best_attr = ''
+  #array to hold the frequency of different class values
+  classFreq = classes.value_counts()
 
-  for attr in data.columns[:-1]:
-    info_gain_attr = sample_entropy - calc_conditional_entropy(data, attr)
-    if info_gain_attr > max_info_gain:
-      max_info_gain = info_gain_attr
-      best_attr = attr
-
-  return best_attr
-
-def decision_tree_learning(data):
-  mode_data = plurality_value(data)
-  if len(data.index) == 0:
-    return mode_whole_data[0]
-  elif mode_data[1] == len(data.index):
-    return mode_data[0]
-  elif len(data.columns) == 1:
-    return mode_data[0]
-  else:
-    best_attr = best_attribute(data)
+  modes = data.iloc[:, -1].mode()
+  
+  classModes = modes.values
+      
+  tie_breaker = countClass.loc[classModes].sort_index() 
+  classPlural = int(tie_breaker.idxmax())
+  
     
-    tree = {}
-    tree[best_attr] = {}
-    for i in range(0, 3):
-      data_i = data[data[best_attr] == i]
-      del data_i[best_attr]
-      subtree = decision_tree_learning(data_i)
-      tree[best_attr][i] = subtree
-    
-    return tree
+  return classPlural, classFreq.get(classPlural)
 
-def print_tree(tree, lvl = 0):
-  if isinstance(tree, int):
-    print(str(tree) + ' ')
-    return
-  print()
-  for attr in tree.keys():
-    for i in range(0, 3):
-      print('| '*lvl + attr + ' = ' + str(i) + ' : ', end = '')
-      print_tree(tree[attr][i], lvl+1)
+#if(len(sys.argv) != 2):
+#    raise ValueError('Please enter exactly two arguments: ' + str(sys.argv))
 
-  return 0
+#dfTraining = pd.read_table(str(sys.argv[0]))
+#dfTesting = pd.read_table(str(sys.argv[1]))
 
-def tree_accuracy(tree, data):
-  
-  return 0
+dfTraining = pd.read_table('train.dat').sample(n=800)
+dfTesting = pd.read_table('test.dat')
 
-data_frame = pd.read_table('train.dat')
-class_counts = data_frame.iloc[:, -1].value_counts()
-mode_whole_data = plurality_value(data_frame)
+countClass = dfTraining.iloc[:, -1].value_counts()
 
-print(best_attribute(data_frame))
-print(data_frame[data_frame[best_attribute(data_frame)] == 2])
-#print(data_frame.iloc[:, -1].value_counts())
-print_tree(decision_tree_learning(data_frame))
-#def make_tree(dataset):
+maxFrequency = plurality(dfTraining)
+
+resultTree = learning_algorithm(dfTraining)
+
+treePrinter(resultTree)
+print('Accuracy on training set: ' + str(accuracyCalc(resultTree, dfTraining)))
+
+print('Accuracy on testing set: ' + str(accuracyCalc(resultTree, dfTesting)))
+
+
+
+
