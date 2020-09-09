@@ -9,16 +9,16 @@ def learning_algorithm(data):
  
   #simply returns the class instance with highest frequency  
   if len(data.index) == 0:
-    return maxFrequency[0]
+    return maxFrequency
 
   #Stores the maximum occurence of class instance in the remaining dataset
   dataMax = maxFreqDataset(data)
   #if only one row instance is left, simply return the mode
   if len(data.iloc[:, -1].value_counts()) == 1:
-    return dataMax[0]
+    return dataMax
   #if only one attribute is left
   elif len(data.columns) == 1:
-    return dataMax[0]
+    return dataMax
   else:
     #Find the optimal attribute to split the tree
     attrBest = attrOptimal(data)
@@ -118,23 +118,32 @@ def entropyCond(data,attr):
   
   return cEntropy
 
-#Function to find the class instance with maximum frequency in the remaining dataset
-#Used for tie-breaking as stated in the prompt rules
 def maxFreqDataset(data):
-    classes = data.iloc[:, -1]
-    
-    #array to hold the frequency of different class values
-    classFreq = classes.value_counts()
-    
-    modes = data.iloc[:, -1].mode()
-  
-    classModes = modes.values
-      
-    tie_breaker = countClass.loc[classModes].sort_index() 
-    classPlural = int(tie_breaker.idxmax())
-  
-    
-    return classPlural, classFreq.get(classPlural)
+  countlist = []
+  for i in range(0,3):
+    countlist.append((data['class'] == i).sum())
+  maxVal = max(countlist)
+  maxCount = countlist.count(maxVal)
+  if maxCount == 1:
+    return countlist.index(maxVal)
+  elif maxCount == 2:
+    if countlist[0] == countlist[1] and countlist[0] == maxVal:
+      if maxFrequency == 0 or maxFrequency == 1:
+        return maxFrequency
+      else:
+        return 0 
+    elif countlist[0] == countlist[2] and countlist[0] == maxVal:
+      if maxFrequency == 0 or maxFrequency == 2:
+        return maxFrequency
+      else:
+        return 0
+    else:
+      if maxFrequency == 1 or maxFrequency == 2:
+        return maxFrequency
+      else:
+        return 1
+  else:
+    return maxFrequency
 
 '''    
 #Throws an error if number of arguments is not equal to 3 (python file + training file + test file)
@@ -146,8 +155,8 @@ dfTraining = pd.read_table(str(sys.argv[1]))
 dfTesting = pd.read_table(str(sys.argv[2]))
 '''
 
-dfTraining = pd.read_table('train4.dat')
-dfTesting = pd.read_table('test4.dat')
+dfTraining = pd.read_table('train.dat')
+dfTesting = pd.read_table('test.dat')
 
 #Stores the frequency of various class instances
 countClass = dfTraining.iloc[:, -1].value_counts()
@@ -164,7 +173,3 @@ treePrinter(resultTree)
 #Printing the accuracy values
 print('Accuracy on training set: ' + str(accuracyCalc(resultTree, dfTraining)))
 print('Accuracy on testing set: ' + str(accuracyCalc(resultTree, dfTesting)))
-
-
-
-
